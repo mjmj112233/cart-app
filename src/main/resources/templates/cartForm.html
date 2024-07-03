@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cart Form</title>
+
+  <style>
+    .App {
+      font-family: Arial, sans-serif;
+      background: #dbdbdb;
+      height: inherit;
+      padding: 20px;
+    }
+
+    header {
+      padding: 20px;
+    }
+
+    button{
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    form {
+      background: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    label, input {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      width: calc(100% - 22px);
+    }
+
+    #response {
+      margin-top: 20px;
+      font-style: italic;
+      font-size: 14px;
+    }
+
+    #response, #cartItems {
+      margin-top: 20px;
+    }
+
+    #cartItems div {
+      background: #fff;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    #cartItems button {
+      background: #f44336;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      font-size: 16px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #cartItems button.edit {
+      background: #4CAF50;
+    }
+  </style>
+</head>
+<body class="App">
+<h1>Cart</h1>
+
+<form id="cartForm">
+  <label for="itemName">Item Name:</label>
+  <input type="text" id="itemName" name="itemName" required>
+
+  <label for="itemQuantity">Quantity:</label>
+  <input type="number" id="itemQuantity" name="itemQuantity" required>
+
+  <label for="itemPrice">Price:</label>
+  <input type="number" id="itemPrice" name="itemPrice" step="0.01" required>
+
+  <button type="submit">Add to Cart</button>
+</form>
+
+<div id="response"></div>
+<div id="cartItems"></div>
+
+<script>
+    document.getElementById('cartForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      const itemName = document.getElementById('itemName').value;
+      const itemQuantity = document.getElementById('itemQuantity').value;
+      const itemPrice = document.getElementById('itemPrice').value;
+
+      const cartItem = {
+        name: itemName,
+        quantity: itemQuantity,
+        price: itemPrice
+      };
+
+      fetch('/api/cart/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(cartItem)
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('response').innerText = 'Item added: ' + JSON.stringify(data);
+        fetchCartItems();
+      })
+      .catch(error => console.error('Error:', error));
+    });
+
+    function fetchCartItems() {
+      fetch('/api/cart')
+      .then(response => response.json())
+      .then(data => {
+        const cartItemsDiv = document.getElementById('cartItems');
+        cartItemsDiv.innerHTML = '<h2>Cart Items</h2>';
+        data.forEach(item => {
+          const itemDiv = document.createElement('div');
+          itemDiv.innerHTML = `
+            <p>ID: ${item.id}, Name: ${item.name}, Quantity: ${item.quantity}, Price: ${item.price}</p>
+            <button class="edit" onclick="editItem(${item.id})">Edit</button>
+            <button onclick="deleteItem(${item.id})">Delete</button>
+          `;
+          cartItemsDiv.appendChild(itemDiv);
+        });
+      })
+      .catch(error => console.error('Error:', error));
+    }
+
+    function editItem(id) {
+      const itemName = prompt("Enter new name:");
+      const itemQuantity = prompt("Enter new quantity:");
+      const itemPrice = prompt("Enter new price:");
+
+      if (itemName !== null && itemQuantity !== null && itemPrice !== null) {
+        const cartItemDetails = {
+          name: itemName,
+          quantity: parseInt(itemQuantity),
+          price: parseFloat(itemPrice)
+        };
+
+        fetch(`/api/cart/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(cartItemDetails)
+        })
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('response').innerText = 'Item updated: ' + JSON.stringify(data);
+          fetchCartItems();
+        })
+        .catch(error => console.error('Error:', error));
+      }
+    }
+
+    function deleteItem(id) {
+      fetch(`/api/cart/${id}`, {
+        method: 'DELETE'
+      })
+      .then(() => {
+        document.getElementById('response').innerText = 'Item deleted.';
+        fetchCartItems();
+      })
+      .catch(error => console.error('Error:', error));
+    }
+
+    // Fetch and display cart items on page load
+    fetchCartItems();
+  </script>
+</body>
+</html>
